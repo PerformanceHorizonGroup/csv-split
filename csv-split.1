@@ -1,0 +1,22 @@
+.\" Manpage for csv-split.
+.\" Send bugs to mike.grunder@performancehorizon.com, or just yell at me.
+.TH man 1 "29 Jan 2013" "1.0" "csv-split"
+.SH NAME
+csv-split \- Process a CSV file and split it into parts
+.SH SYNOPSIS
+csv-split [OPTIONS] FILE OUTPUT-PATH
+.SH DESCRIPTION
+csv-split will process a csv file on the filesystem or read one from STDIN and break it into multiple parts, as specified by options.
+.SH OPTIONS
+.TP
+\fB-g\fR, \fB\-\-group-col\fR
+The zero based column with values that must remain together.  If specified, csv-split will not seperate rows with the same value in this column apart.  This assumes that the file is sorted by this column, however.
+.TP
+\fB-n\fR, \fB\-\-num-rows\fR
+The maximum number of rows to put in each file.  If we're grouping column values, the actual number of rows can be slightly more than this.
+.TP
+\fB\-\-stdin\fR
+If provided, csv-split will read from standard input, rather than trying to open a file
+.TP
+\fB-t\fR, \fB\-\-trigger\fR
+Each time \fBcsv-split\fR writes a chunk of data, it can be configured to run a command specified by this option.  Two environment variables will be set prior to running the command.  CSV_PAYLOAD_FILE will contain the file that was written, and CSV_PAYLOAD_ROWCOUNT will contain the number of lines in the split file.
