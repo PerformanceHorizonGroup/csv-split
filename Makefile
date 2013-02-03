@@ -6,6 +6,9 @@ CFLAGS=$(DEBUG) $(OPTIMIZATION) $(LINK)
 INSTALL_PATH?=/usr/local
 BIN=csv-split
 DEPS=csv-split.h csv-buf.h queue.h
+MANPREFIX?=/usr/share/man/man1
+MANPAGE=csv-split.1
+MANCMP=csv-split.1.gz
 
 .PHONY: debug
 
@@ -22,9 +25,10 @@ all:
 	$(MAKE) DEBUG=""
 
 clean:
-	rm -f *.o $(BIN)
+	rm -f *.o *.gz $(BIN)
 
 install: all
+	gzip -c $(MANPAGE) > $(MANPAGE).gz && cp -pf $(MANPAGE).gz $(MANPREFIX)
 	cp -pf $(BIN) $(INSTALL_PATH)/bin
 
 dep: 

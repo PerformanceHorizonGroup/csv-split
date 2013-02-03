@@ -13,7 +13,7 @@
  */
 static void exec_trigger(const char *trigger_cmd, const char *job_file, unsigned long row_count) {
 	// The full trigger command we'll execute
-	char row_count_str[40];
+    char row_count_str[40];
 
     // Get the row count in the form of a string
     snprintf(row_count_str, sizeof(row_count_str), "%lu", row_count);
@@ -29,9 +29,9 @@ static void exec_trigger(const char *trigger_cmd, const char *job_file, unsigned
     }
 
 	// Trigger our command
-	if(system(trigger_cmd) != 0) {
-		fprintf(stderr, "Error:  Couldn't execute system command \"%s\"\n", trigger_cmd);
-	}
+    if(system(trigger_cmd) != 0) {
+        fprintf(stderr, "Error:  Couldn't execute system command \"%s\"\n", trigger_cmd);
+    }
 }
 
 /**
@@ -63,7 +63,7 @@ void *io_worker(void *arg) {
 
         // Execute our trigger if one is set
         if(item->trigger_cmd) {
-        	exec_trigger(item->trigger_cmd, item->out_file, item->row_count);
+            exec_trigger(item->trigger_cmd, item->out_file, item->row_count);
         }
 
         // Now free our memory as this was a copy
@@ -78,7 +78,7 @@ void *io_worker(void *arg) {
 // add it, and send it to one of our IO threads
 void flush_file(struct csv_context *ctx, unsigned int use_ovr) {
     // Create a queue item
-	struct q_flush_item *q_item = malloc(sizeof(struct q_flush_item));
+    struct q_flush_item *q_item = malloc(sizeof(struct q_flush_item));
 
     // If we've got an overflow position and we're supposed to use it, do so
     size_t flush_len = use_ovr && ctx->opos ? ctx->opos : CBUF_POS(ctx->csv_buf);
@@ -114,75 +114,75 @@ void flush_file(struct csv_context *ctx, unsigned int use_ovr) {
  * Column callback
  */
 static inline void cb_col(void *s, size_t len, void *data) {
-	struct csv_context *ctx = (struct csv_context *)data;
-	size_t cnt;
+    struct csv_context *ctx = (struct csv_context *)data;
+    size_t cnt;
 
-	// Clean up "NULL"
-	if((len == 4 && !memcmp(s, "NULL", 4)) || (len == 2 && !memcmp(s, "\\N", 2))) {
-		len = 0;
-	}
+    // Clean up "NULL"
+    if((len == 4 && !memcmp(s, "NULL", 4)) || (len == 2 && !memcmp(s, "\\N", 2))) {
+        len = 0;
+    }
 
-	// Put a comma if we should
-	if(ctx->put_comma) {
-		ctx->csv_buf = cbuf_putc(ctx->csv_buf, ',');
-	}
-	ctx->put_comma = 1;
+    // Put a comma if we should
+    if(ctx->put_comma) {
+        ctx->csv_buf = cbuf_putc(ctx->csv_buf, ',');
+    }
+    ctx->put_comma = 1;
 
-	// If we are keeping same columns together see if we're on one
-	if(ctx->gcol > -1 && ctx->col == ctx->gcol) {
-		// If we have a last column value and we're in overflow, check
+    // If we are keeping same columns together see if we're on one
+    if(ctx->gcol > -1 && ctx->col == ctx->gcol) {
+        // If we have a last column value and we're in overflow, check
 		// the new row's value against the last one
-		if(ctx->gcol_buf && ctx->opos && memcmp(ctx->gcol_buf, s, len) != 0) {
-			// Flush the data we have!
-			flush_file(ctx, 1);
-		} else if(!ctx->gcol_buf) {
-			//ctx->gcol_buf = (char*)malloc(100);
-			ctx->gcol_buf = cbuf_init(len);
-		}
+        if(ctx->gcol_buf && ctx->opos && memcmp(ctx->gcol_buf, s, len) != 0) {
+            // Flush the data we have!
+            flush_file(ctx, 1);
+        } else if(!ctx->gcol_buf) {
+            //ctx->gcol_buf = (char*)malloc(100);
+            ctx->gcol_buf = cbuf_init(len);
+        }
 
-		// Update our last group column value
-		ctx->gcol_buf = cbuf_setlen(ctx->gcol_buf, (const char*)s, len);
-	}
+        // Update our last group column value
+        ctx->gcol_buf = cbuf_setlen(ctx->gcol_buf, (const char*)s, len);
+    }
 
-	// Make sure we can write all the data
-	while((cnt = csv_write(CBUF_PTR(ctx->csv_buf), CBUF_REM(ctx->csv_buf), s, len)) > CBUF_REM(ctx->csv_buf)) {
-		// We didn't have room, reallocate
-		ctx->csv_buf = cbuf_double(ctx->csv_buf);
-	}
+    // Make sure we can write all the data
+    while((cnt = csv_write(CBUF_PTR(ctx->csv_buf), CBUF_REM(ctx->csv_buf), s, len)) > CBUF_REM(ctx->csv_buf)) {
+        // We didn't have room, reallocate
+        ctx->csv_buf = cbuf_double(ctx->csv_buf);
+    }
 
-	// Increment where we are in our buffer
-	CBUF_POS(ctx->csv_buf)+=cnt;
+    // Increment where we are in our buffer
+    CBUF_POS(ctx->csv_buf)+=cnt;
 
-	// Increment our column
-	ctx->col++;
+    // Increment our column
+    ctx->col++;
 }
 
 /**
  * Row parsing callback
  */
 void cb_row(int c, void *data) {
-	// Type cast to our context structure
-	struct csv_context *ctx = (struct csv_context*)data;
+    // Type cast to our context structure
+    struct csv_context *ctx = (struct csv_context*)data;
 
-	// Put a newline
-	ctx->csv_buf = cbuf_putc(ctx->csv_buf, '\n');
+    // Put a newline
+    ctx->csv_buf = cbuf_putc(ctx->csv_buf, '\n');
 
-	// Have we hit our row count limit
-	if(ctx->row++ == ctx->max_rows - 1) {
-		// If we're keeping a given column together mark
-		// our overflow position.  Otherwise we flip
-		if(ctx->gcol >= 0) {
-			ctx->opos = CBUF_POS(ctx->csv_buf);
-		} else {
-			flush_file(ctx, 0);
-		}
-	}
+    // Have we hit our row count limit
+    if(ctx->row++ == ctx->max_rows - 1) {
+        // If we're keeping a given column together mark
+        // our overflow position.  Otherwise we flip
+        if(ctx->gcol >= 0) {
+            ctx->opos = CBUF_POS(ctx->csv_buf);
+        } else {
+            flush_file(ctx, 0);
+        }
+    }
 
-	// Back on column zero
-	ctx->col=0;
+    // Back on column zero
+    ctx->col=0;
 
-	// We don't need a comma for the next column
-	ctx->put_comma = 0;
+    // We don't need a comma for the next column
+    ctx->put_comma = 0;
 }
 
 /**
@@ -202,8 +202,8 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
     // While we've got arguments to parse
     while((opt = getopt_long(argc, argv, "g:n:", g_long_opts, &opt_idx)) != -1) {
         switch(opt) {
-        	case 't':
-        		strncpy(ctx->trigger_cmd, optarg, sizeof(ctx->trigger_cmd));
+            case 't':
+                strncpy(ctx->trigger_cmd, optarg, sizeof(ctx->trigger_cmd));
         		break;
             case 'g':
                 ctx->gcol = atoi(optarg);
@@ -390,6 +390,9 @@ int main(int argc, char **argv) {
 
     // Join our threads
     join_threads(&ctx);
+
+    // One last trigger showing we're done
+    exec_trigger(ctx.trigger_cmd, "", 0);
 
     // Free memory from our context
     context_free(&ctx);

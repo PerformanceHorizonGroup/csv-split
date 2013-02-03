@@ -40,22 +40,22 @@
 // Context we'll need for our split operation
 struct csv_context {
     // Our input file and output path
-	char in_file[255], out_path[255];
+    char in_file[255], out_path[255];
 
     // The prefix to use when we split
     const char *in_prefix;
 
 	// Trigger command to run when a chunk is done
-	char trigger_cmd[255];
+    char trigger_cmd[255];
 
     // Should we read from stdin?
     int from_stdin;
 
     // Which part are we on
-	unsigned int on_file;
+    unsigned int on_file;
 
     // The number of rows, and our current column
-	unsigned long row, col;
+    unsigned long row, col;
 
     // The maximum number of rows per file
     unsigned long max_rows; 
@@ -65,23 +65,23 @@ struct csv_context {
      * we've gone past our maximum row count but may need to in order
      * to keep 'group together' column data together
      */
-	size_t opos;
+    size_t opos;
 
     /**
      * "group together" column, meaning that we will never split rows
      * with the same value for this column apart.  We assume the
      * rows are sorted by this column
      */
-	int gcol;
+    int gcol;
 
     // Simple flag to let us know if we should put a comma
     unsigned int put_comma;
 
     // The last group column we encountered, so we can detect when it changes
-	cbuf gcol_buf;
+    cbuf gcol_buf;
 
     // A buffer we're using and re-using to write the CSV output data
-	cbuf csv_buf;
+    cbuf csv_buf;
 
     // Our blocking, thread-safe, IO queue
     fqueue io_queue;
