@@ -117,11 +117,6 @@ static inline void cb_col(void *s, size_t len, void *data) {
     struct csv_context *ctx = (struct csv_context *)data;
     size_t cnt;
 
-    // Clean up "NULL"
-    if((len == 4 && !memcmp(s, "NULL", 4)) || (len == 2 && !memcmp(s, "\\N", 2))) {
-        len = 0;
-    }
-
     // Put a comma if we should
     if(ctx->put_comma) {
         ctx->csv_buf = cbuf_putc(ctx->csv_buf, ',');
