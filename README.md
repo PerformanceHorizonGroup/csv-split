@@ -3,12 +3,6 @@
 csv-split is a simple utility that can parse and break up large CSV files into smaller peices, with various options on how it does that.  
 
 ----
-# Dependancies 
-----
-
-csv-split relies on [libcsv](http://sourceforge.net/projects/libcsv/) for the mechanics of parsing CSV files, so that must first be insalled on your system
-
-----
 # Compiling
 ---
 

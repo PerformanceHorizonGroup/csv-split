@@ -4,7 +4,7 @@
 #include "csv-buf.h"
 #include "queue.h"
 #include <getopt.h>
-#include <csv.h>
+#include "csv.h"
 
 /**
  * How many IO threads to run
