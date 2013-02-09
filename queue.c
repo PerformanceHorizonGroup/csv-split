@@ -42,7 +42,7 @@ int fq_init(fqueue *queue, size_t max_len) {
 }
 
 int fq_add(fqueue *queue, void *data) {
-    struct queue_item *item, *tmp;
+    struct queue_item *item;
 
     // Attain exclusive access
     pthread_mutex_lock(&queue->mutex);
