@@ -42,11 +42,15 @@ void *io_worker(void *arg) {
     // Grab our queue
     fqueue *queue = (fqueue*)arg;
 
-    // Queue item
+    // Queue item, as well as void pointer for it (strict aliasing)
     struct q_flush_item *item;
+    void *itm_ptr;
 
     // Block until we have work, or we're done
-    while(!fq_get(queue, (void**)&item)) {
+    while(!fq_get(queue, &itm_ptr)) {
+        // Assign the item for us
+        item = itm_ptr;
+
         FILE *fp = fopen(item->out_file, "w");
         if(!fp) {
             fprintf(stderr, "Error: Unable to open output file '%s'\n", item->out_file);
