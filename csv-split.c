@@ -1,12 +1,12 @@
 #include "csv-split.h"
 #include "csv-buf.h"
+#include "csv.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
-#include <csv.h>
 
 /**
  * Trigger a command when a job is done
