@@ -365,8 +365,9 @@ void process_csv(struct csv_context *ctx) {
  * Main entry point for processing arguments and starting the split process
  */
 int main(int argc, char **argv) {
-	// Create our context object
-	struct csv_context ctx = {0};
+	// Create our context object, null it out
+	struct csv_context ctx;
+    memset(&ctx, 0, sizeof(struct csv_context));
 
     // Initialize buffers
     context_init(&ctx);
@@ -391,4 +392,7 @@ int main(int argc, char **argv) {
 
     // Free memory from our context
     context_free(&ctx);
+
+    // Success
+    return 0;
 }

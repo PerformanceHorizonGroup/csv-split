@@ -83,8 +83,6 @@ int fq_add(fqueue *queue, void *data) {
 }
 
 int fq_get(fqueue *queue, void **data) {
-    int ret = 0;
-
     // Argument sanity check
     if(queue == NULL) {
         return EINVAL;

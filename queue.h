@@ -8,6 +8,7 @@
 #ifndef QUEUE_H_
 #define QUEUE_H_
 
+#include <pthread.h>
 #include <semaphore.h>
 
 /**
@@ -89,5 +90,10 @@ int fq_get(fqueue *queue, void **data);
  * Add a null element which will flag our queue as done
  */
 int fq_fin(fqueue *queue);
+
+/**
+ * Free a queue
+ */
+int fq_free(fqueue *queue);
 
 #endif /* QUEUE_H_ */

@@ -113,8 +113,6 @@ struct q_flush_item {
     size_t len;
 };
 
-static const char *g_short_opt_str = "g:n:";
-
 static const struct option g_long_opts[] = {
     { "group-col", required_argument, NULL, 'g' },
     { "num-rows", required_argument, NULL, 'n' },
