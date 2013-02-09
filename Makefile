@@ -2,7 +2,7 @@ CC:=$(shell sh -c 'type $(CC) >/dev/null 2>/dev/null && echo $(CC) || echo gcc')
 LINK=-lpthread
 DEBUG?=-g -ggdb
 OPTIMIZATION?=-O3
-CFLAGS=-Wall $(DEBUG) $(OPTIMIZATION) $(LINK)
+CFLAGS=-Wall $(DEBUG) $(OPTIMIZATION)
 INSTALL_PATH?=/usr/local
 BIN=csv-split
 DEPS=csv-split.h csv-buf.h queue.h csv.h
@@ -16,7 +16,7 @@ MANCMP=csv-split.1.gz
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 csv-split: queue.o csv-buf.o libcsv.o csv-split.o
-	$(CC) -o $(BIN) csv-buf.o queue.o libcsv.o csv-split.o $(CFLAGS)
+	$(CC) -o $(BIN) csv-buf.o queue.o libcsv.o csv-split.o $(CFLAGS) $(LINK)
 
 debug:
 	$(MAKE) OPTIMIZATION=""
