@@ -166,10 +166,10 @@ void cb_row(int c, void *data) {
     // Put a newline
     ctx->csv_buf = cbuf_putc(ctx->csv_buf, '\n');
 
-    // Have we hit our row count limit
-    if(ctx->row++ == ctx->max_rows - 1) {
-        // If we're keeping a given column together mark
-        // our overflow position.  Otherwise we flip
+    // If we're at or above our row limit, either keep track/ of the position
+    //  of this row (if we're grouping columns), or write these rows to disk.
+    if(ctx->row++ >= ctx->max_rows - 1) {
+        // Mark the position of this row if we're grouping columns, or flush
         if(ctx->gcol >= 0) {
             ctx->opos = CBUF_POS(ctx->csv_buf);
         } else {
