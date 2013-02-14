@@ -199,7 +199,7 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
     char *ptr;
 
     // While we've got arguments to parse
-    while((opt = getopt_long(argc, argv, "g:n:", g_long_opts, &opt_idx)) != -1) {
+    while((opt = getopt_long(argc, argv, "g:n:v:", g_long_opts, &opt_idx)) != -1) {
         switch(opt) {
             case 't':
                 strncpy(ctx->trigger_cmd, optarg, sizeof(ctx->trigger_cmd));
@@ -219,6 +219,9 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
             case '?':
                 print_usage(argv[0]);
                 exit(EXIT_FAILURE);
+            case 'v':
+                printf("csv-split " CSV_SPLIT_VERSION "\n");
+                exit(EXIT_SUCCESS); 
             case 0:
                 // Parse from STDIN
                 if(!strcmp("stdin", g_long_opts[opt_idx].name)) {

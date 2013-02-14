@@ -7,6 +7,11 @@
 #include "csv.h"
 
 /**
+ * Version number
+ */
+#define CSV_SPLIT_VERSION "0.1.0"
+
+/**
  * How many IO threads to run
  */
 #define BG_FLUSH_THREADS 1
@@ -118,6 +123,7 @@ static const struct option g_long_opts[] = {
     { "num-rows", required_argument, NULL, 'n' },
     { "stdin", no_argument, NULL, 0 },
     { "trigger", required_argument, NULL, 't'},
+    { "version", no_argument, NULL, 'v'},
     { 0, 0, 0, 0}
 };
 
