@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
+#include <zlib.h>
 
 /**
  * Trigger a command when a job is done
@@ -35,6 +36,52 @@ static void exec_trigger(const char *trigger_cmd, const char *job_file, unsigned
 }
 
 /**
+ * Write uncompressed data
+ */
+static void write_file(const char *file, const char *data, size_t len) {
+	// Attempt to open the file
+	FILE *fp = fopen(file, "w");
+
+	// Bomb out if we can't open the file
+	if(!fp) {
+		fprintf(stderr, "Error:  Unable to open output file '%s\n", file);
+		exit(EXIT_FAILURE);
+	}
+
+	// Attempt to write our data and abort if we can not
+	if(fwrite(data, 1, len, fp) != len) {
+		fprintf(stderr, "Error:  Unable to write all data to file '%s'\n", file);
+		exit(EXIT_FAILURE);
+	}
+
+	// Close our file
+	fclose(fp);
+}
+
+/**
+ * Write gz compressed data
+ */
+static void write_gz_file(const char *file, const char *data, size_t len) {
+	// Attempt to open our file
+	gzFile fp = gzopen(file, "wb");
+
+	// Bomb out if we can't open the file
+	if(!fp) {
+		fprintf(stderr, "Error:  Unable to open output file '%s'\n", file);
+		exit(EXIT_FAILURE);
+	}
+
+	// Attempt to write our data compressed
+	if(gzwrite(fp, data, len) != len) {
+		fprintf(stderr, "Error:  Unable to write all data to file '%s'\n", file);
+		exit(EXIT_FAILURE);
+	}
+
+	// Close our file
+	gzclose(fp);
+}
+
+/**
  * Our IO worker thread, where we wait on our IO queue (files to be written)
  * and write them as we get them.  Once the queue is flagged done, we'll finish
  */
@@ -42,17 +89,29 @@ void *io_worker(void *arg) {
     // Grab our queue
     fqueue *queue = (fqueue*)arg;
 
-    // Queue item, as well as void pointer for it (strict aliasing)
     struct q_flush_item *item;
     void *itm_ptr;
+    char out_file[1024];
 
     // Block until we have work, or we're done
     while(!fq_get(queue, &itm_ptr)) {
         // Assign the item for us
         item = itm_ptr;
 
-        FILE *fp = fopen(item->out_file, "w");
-        if(!fp) {
+        // Write either uncompressed or compressed data
+        if(item->gzip) {
+            // Append gz extension and write the file
+            snprintf(out_file, sizeof(out_file),"%s.gz", item->out_file);
+            write_gz_file(out_file, item->str, item->len);
+        } else {
+        	// We're writing to the filename passed
+        	strncpy(out_file, item->out_file, sizeof(out_file));
+        	write_file(out_file, item->str, item->len);
+        }
+
+    	/*FILE *fp = fopen(item->out_file, "w");
+
+    	if(!fp) {
             fprintf(stderr, "Error: Unable to open output file '%s'\n", item->out_file);
             exit(EXIT_FAILURE);
         }
@@ -63,11 +122,11 @@ void *io_worker(void *arg) {
         }
 
         // Close our file
-        fclose(fp);
+        fclose(fp);*/
 
         // Execute our trigger if one is set
         if(item->trigger_cmd) {
-            exec_trigger(item->trigger_cmd, item->out_file, item->row_count);
+            exec_trigger(item->trigger_cmd, out_file, item->row_count);
         }
 
         // Now free our memory as this was a copy
@@ -103,6 +162,9 @@ void flush_file(struct csv_context *ctx, unsigned int use_ovr) {
     // Make a copy of our buffer, and store our length
     q_item->str = cbuf_duplen(ctx->csv_buf, &flush_len);
     q_item->len = flush_len;
+
+    // Set our gzip flag
+    q_item->gzip = ctx->gzip;
 
     // Chop our output buffer
     CBUF_SETPOS(ctx->csv_buf, 0);
@@ -199,7 +261,7 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
     char *ptr;
 
     // While we've got arguments to parse
-    while((opt = getopt_long(argc, argv, "g:n:v:", g_long_opts, &opt_idx)) != -1) {
+    while((opt = getopt_long(argc, argv, "g:n:v:i:", g_long_opts, &opt_idx)) != -1) {
         switch(opt) {
             case 't':
                 strncpy(ctx->trigger_cmd, optarg, sizeof(ctx->trigger_cmd));
@@ -215,13 +277,25 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
                 }
                 ctx->max_rows = intval;
                 break;
+            case 'i':
+                intval = atoi(optarg);
+                if(intval < IO_THREADS_MIN || intval > IO_THREADS_MAX) {
+                    fprintf(stderr, "Thread count must be in range %d - %d\n",
+                            IO_THREADS_MIN, IO_THREADS_MAX);
+                    exit(EXIT_FAILURE);
+                }
+                ctx->thread_count = intval;
+                break;
+            case 'z':
+            	ctx->gzip = 1;
+            	break;
             case 'h':
             case '?':
                 print_usage(argv[0]);
                 exit(EXIT_FAILURE);
             case 'v':
                 printf("csv-split " CSV_SPLIT_VERSION "\n");
-                exit(EXIT_SUCCESS); 
+                exit(EXIT_SUCCESS);
             case 0:
                 // Parse from STDIN
                 if(!strcmp("stdin", g_long_opts[opt_idx].name)) {
@@ -269,7 +343,7 @@ void spool_threads(struct csv_context *ctx) {
     int i;
 
     // Iterate up to our thread count
-    for(i=0;i<BG_FLUSH_THREADS;i++) {
+    for(i=0;i<ctx->thread_count;i++) {
         // We have to fail if our background threads fail to initialize
         if(pthread_create(&ctx->io_threads[i], NULL, io_worker, (void*)&ctx->io_queue) != 0) {
             fprintf(stderr, "Couldn't start background IO threads!\n");
@@ -285,7 +359,7 @@ void join_threads(struct csv_context *ctx) {
     int i=0;
 
     // Iterate, joining on threads
-    for(i=0;i<BG_FLUSH_THREADS;i++) {
+    for(i=0;i<ctx->thread_count;i++) {
         pthread_join(ctx->io_threads[i], NULL);
     }
 }
@@ -309,8 +383,14 @@ void context_init(struct csv_context *ctx) {
     // Set our csv block realloc size
     csv_set_blk_size(&ctx->parser, CSV_BLK_SIZE);
 
+    // Initialize our thread count
+    ctx->thread_count = IO_THREADS_DEFAULT;
+
     // Default to no group column
     ctx->gcol = -1;
+
+    // Default to not gzipping our output files
+    ctx->gzip = 0;
 }
 
 /**
@@ -330,6 +410,9 @@ void context_free(struct csv_context *ctx) {
 
     // Free our CSV parser
     csv_free(&ctx->parser);
+
+    // Free our thread storage
+    free(ctx->io_threads);
 }
 
 /**
@@ -381,6 +464,15 @@ int main(int argc, char **argv) {
 
     // Attempt to parse our arguments
     parse_args(&ctx, argc, argv);
+
+    // Allocate memory for thread storage
+    ctx.io_threads = malloc(ctx.thread_count * sizeof *ctx.io_threads);
+
+    // OOM sanity check
+    if(!ctx.io_threads) {
+        fprintf(stderr, "Error:  Couldn't allocate thread storage.\n");
+        exit(EXIT_FAILURE);
+    }
 
     // Initialize our IO threads
     spool_threads(&ctx);

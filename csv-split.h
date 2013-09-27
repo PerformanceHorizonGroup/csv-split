@@ -12,9 +12,11 @@
 #define CSV_SPLIT_VERSION "0.1.0"
 
 /**
- * How many IO threads to run
+ * Default IO thread count and sane min/max values
  */
-#define BG_FLUSH_THREADS 1
+#define IO_THREADS_DEFAULT 1
+#define IO_THREADS_MIN     1
+#define IO_THREADS_MAX     10
 
 /**
  * How much of a backlog to allow in our IO queue
@@ -66,7 +68,7 @@ struct csv_context {
     unsigned long max_rows; 
 
 	/**
-     * Mark our overflow position here, which lets us speficy that
+     * Mark our overflow position here, which lets us specify that
      * we've gone past our maximum row count but may need to in order
      * to keep 'group together' column data together
      */
@@ -78,6 +80,11 @@ struct csv_context {
      * rows are sorted by this column
      */
     int gcol;
+
+    /**
+     * Are we gzipping the output files
+     */
+    unsigned short gzip;
 
     // Simple flag to let us know if we should put a comma
     unsigned int put_comma;
@@ -91,9 +98,10 @@ struct csv_context {
     // Our blocking, thread-safe, IO queue
     fqueue io_queue;
 
-    // Our background, IO threads
-    pthread_t io_threads[BG_FLUSH_THREADS];
-
+    // The number of threads we're using, and storage for them
+    unsigned int thread_count;
+    pthread_t *io_threads;
+    
     // Our CSV parser
     struct csv_parser parser;
 };
@@ -116,14 +124,19 @@ struct q_flush_item {
 
     // The data length
     size_t len;
+
+    // Should we gzip the output
+    unsigned short gzip;
 };
 
 static const struct option g_long_opts[] = {
     { "group-col", required_argument, NULL, 'g' },
     { "num-rows", required_argument, NULL, 'n' },
+    { "io-threads", optional_argument, NULL, 'i'},
     { "stdin", no_argument, NULL, 0 },
     { "trigger", required_argument, NULL, 't'},
     { "version", no_argument, NULL, 'v'},
+    { "gzip", no_argument, NULL, 'z'},
     { 0, 0, 0, 0}
 };
 

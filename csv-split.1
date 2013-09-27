@@ -18,5 +18,8 @@ The maximum number of rows to put in each file.  If we're grouping column values
 \fB\-\-stdin\fR
 If provided, csv-split will read from standard input, rather than trying to open a file
 .TP
+\fB-z\fR, \fB\-\-gzip\fR
+If this argument is present, each file will be gzip compressed when written
+.TP
 \fB-t\fR, \fB\-\-trigger\fR
 Each time \fBcsv-split\fR writes a chunk of data, it can be configured to run a command specified by this option.  Two environment variables will be set prior to running the command.  CSV_PAYLOAD_FILE will contain the file that was written, and CSV_PAYLOAD_ROWCOUNT will contain the number of lines in the split file.
