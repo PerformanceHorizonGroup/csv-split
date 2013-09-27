@@ -109,21 +109,6 @@ void *io_worker(void *arg) {
         	write_file(out_file, item->str, item->len);
         }
 
-    	/*FILE *fp = fopen(item->out_file, "w");
-
-    	if(!fp) {
-            fprintf(stderr, "Error: Unable to open output file '%s'\n", item->out_file);
-            exit(EXIT_FAILURE);
-        }
-
-        if(fwrite(item->str, 1, item->len, fp) != item->len) {
-            fprintf(stderr, "Error: Unable to write all data to file '%s'\n", item->out_file);
-            exit(EXIT_FAILURE);
-        }
-
-        // Close our file
-        fclose(fp);*/
-
         // Execute our trigger if one is set
         if(item->trigger_cmd) {
             exec_trigger(item->trigger_cmd, out_file, item->row_count);
