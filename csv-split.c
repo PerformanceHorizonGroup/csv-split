@@ -48,6 +48,7 @@ static void write_file(const char *file, const char *data, size_t len) {
 		exit(EXIT_FAILURE);
 	}
 
+
 	// Attempt to write our data and abort if we can not
 	if(fwrite(data, 1, len, fp) != len) {
 		fprintf(stderr, "Error:  Unable to write all data to file '%s'\n", file);
@@ -61,9 +62,19 @@ static void write_file(const char *file, const char *data, size_t len) {
 /**
  * Write gz compressed data
  */
-static void write_gz_file(const char *file, const char *data, size_t len) {
-	// Attempt to open our file
-	gzFile fp = gzopen(file, "wb");
+static void write_gz_file(const char *file, const char *data, size_t len, int level) {
+	// Compression mode (level)
+	char mode[255];
+
+	// Default compression or specific compression level
+	if(level == Z_DEFAULT_COMPRESSION) {
+		strncpy(mode,"wb",sizeof(mode));
+	} else {
+		snprintf(mode,sizeof(mode),"wb%d",level);
+	}
+
+	// Open our file
+	gzFile fp = gzopen(file,mode);
 
 	// Bomb out if we can't open the file
 	if(!fp) {
@@ -102,7 +113,7 @@ void *io_worker(void *arg) {
         if(item->gzip) {
             // Append gz extension and write the file
             snprintf(out_file, sizeof(out_file),"%s.gz", item->out_file);
-            write_gz_file(out_file, item->str, item->len);
+            write_gz_file(out_file, item->str, item->len, item->gzip);
         } else {
         	// We're writing to the filename passed
         	strncpy(out_file, item->out_file, sizeof(out_file));
@@ -246,7 +257,7 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
     char *ptr;
 
     // While we've got arguments to parse
-    while((opt = getopt_long(argc, argv, "g:n:v:i:", g_long_opts, &opt_idx)) != -1) {
+    while((opt = getopt_long(argc, argv, "g:n:v:i:z::", g_long_opts, &opt_idx)) != -1) {
         switch(opt) {
             case 't':
                 strncpy(ctx->trigger_cmd, optarg, sizeof(ctx->trigger_cmd));
@@ -263,16 +274,26 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
                 ctx->max_rows = intval;
                 break;
             case 'i':
-                intval = atoi(optarg);
-                if(intval < IO_THREADS_MIN || intval > IO_THREADS_MAX) {
-                    fprintf(stderr, "Thread count must be in range %d - %d\n",
-                            IO_THREADS_MIN, IO_THREADS_MAX);
-                    exit(EXIT_FAILURE);
+                if(optarg) {
+                	intval = atoi(optarg);
+                	if(intval < IO_THREADS_MIN || intval > IO_THREADS_MAX) {
+                		fprintf(stderr, "Thread count must be in range %d - %d\n",
+                				IO_THREADS_MIN, IO_THREADS_MAX);
+                		exit(EXIT_FAILURE);
+                	}
+                	ctx->thread_count = intval;
                 }
-                ctx->thread_count = intval;
                 break;
             case 'z':
-            	ctx->gzip = 1;
+            	ctx->gzip = Z_DEFAULT_COMPRESSION;
+            	if(optarg) {
+            		intval = atoi(optarg);
+            		if(intval >= Z_BEST_SPEED && intval <= Z_BEST_COMPRESSION) {
+            			ctx->gzip = intval;
+            		} else {
+            			fprintf(stderr, "Unknown compression level: %d\n", intval);
+            		}
+            	}
             	break;
             case 'h':
             case '?':

@@ -81,10 +81,8 @@ struct csv_context {
      */
     int gcol;
 
-    /**
-     * Are we gzipping the output files
-     */
-    unsigned short gzip;
+    // Gzip compression level (zero for none)
+    int gzip;
 
     // Simple flag to let us know if we should put a comma
     unsigned int put_comma;
@@ -125,8 +123,8 @@ struct q_flush_item {
     // The data length
     size_t len;
 
-    // Should we gzip the output
-    unsigned short gzip;
+    // gzip compression level (zero for none)
+    int gzip;
 };
 
 static const struct option g_long_opts[] = {
@@ -136,7 +134,7 @@ static const struct option g_long_opts[] = {
     { "stdin", no_argument, NULL, 0 },
     { "trigger", required_argument, NULL, 't'},
     { "version", no_argument, NULL, 'v'},
-    { "gzip", no_argument, NULL, 'z'},
+    { "gzip", optional_argument, NULL, 'z'},
     { 0, 0, 0, 0}
 };
 
