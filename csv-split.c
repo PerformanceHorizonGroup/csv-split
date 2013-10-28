@@ -143,7 +143,7 @@ void flush_file(struct csv_context *ctx, unsigned int use_ovr) {
     size_t flush_len = use_ovr && ctx->opos ? ctx->opos : CBUF_POS(ctx->csv_buf);
 
     // Copy in our filename
-    sprintf(q_item->out_file, "%s%s.%d", ctx->out_path, ctx->in_prefix, ++ctx->on_file);
+    sprintf(q_item->out_file, "%s%s.%05d", ctx->out_path, ctx->in_prefix, ++ctx->on_file);
 
     // If we've got a non empty trigger command, set it in our item
     if(*ctx->trigger_cmd) {
