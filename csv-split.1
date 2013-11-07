@@ -23,3 +23,6 @@ If this argument is present, each file will be gzip compressed when written
 .TP
 \fB-t\fR, \fB\-\-trigger\fR
 Each time \fBcsv-split\fR writes a chunk of data, it can be configured to run a command specified by this option.  Two environment variables will be set prior to running the command.  CSV_PAYLOAD_FILE will contain the file that was written, and CSV_PAYLOAD_ROWCOUNT will contain the number of lines in the split file.
+.TP
+\fB-d\fR, \fB\-\-header\fR
+If you pass this argument, csv-split will treat the first row as a header and inject it into each split file.  By default this header row is not counted toward the total row count in each file.  To count the header row toward each total, pass 1 as an option to the argument (e.g. --header=1, -d1).

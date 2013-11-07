@@ -162,11 +162,15 @@ void flush_file(struct csv_context *ctx, unsigned int use_ovr) {
     // Set our gzip flag
     q_item->gzip = ctx->gzip;
 
-    // Chop our output buffer
-    CBUF_SETPOS(ctx->csv_buf, 0);
+    // Chop our output buffer to the length of our header.  If we're not
+    // injecting headers, header_len will be zero.
+    CBUF_SETPOS(ctx->csv_buf, ctx->header_len);
 
-    // Reset our row counter and overflow
-    ctx->row = ctx->opos = 0;
+    // Reset our row count (zero unless we're counting the header)
+    ctx->row  = ctx->count_header ? 1 : 0;
+    
+    // Reset overflow position
+    ctx->opos = 0;
 
     // Add to our blocking/limited queue
     fq_add(&ctx->io_queue, (void*)q_item);
@@ -187,18 +191,21 @@ static inline void cb_col(void *s, size_t len, void *data) {
 
     // If we are keeping same columns together see if we're on one
     if(ctx->gcol > -1 && ctx->col == ctx->gcol) {
-        // If we have a last column value and we're in overflow, check
-		// the new row's value against the last one
-        if(ctx->gcol_buf && ctx->opos && memcmp(ctx->gcol_buf, s, len) != 0) {
-            // Flush the data we have!
-            flush_file(ctx, 1);
-        } else if(!ctx->gcol_buf) {
-            //ctx->gcol_buf = (char*)malloc(100);
-            ctx->gcol_buf = cbuf_init(len);
-        }
+        // Don't treat header columns as a group column
+        if(!ctx->use_header || ctx->header_len) {
+            // If we have a last column value and we're in overflow, check
+	    	// the new row's value against the last one
+            if(ctx->gcol_buf && ctx->opos && memcmp(ctx->gcol_buf, s, len) != 0) {
+                // Flush the data we have!
+                flush_file(ctx, 1);
+            } else if(!ctx->gcol_buf) {
+                // Initialize a new group column buffer
+                ctx->gcol_buf = cbuf_init(len);
+            }
 
-        // Update our last group column value
-        ctx->gcol_buf = cbuf_setlen(ctx->gcol_buf, (const char*)s, len);
+            // Update our last group column value
+            ctx->gcol_buf = cbuf_setlen(ctx->gcol_buf, (const char*)s, len);
+        }
     }
 
     // Make sure we can write all the data
@@ -224,9 +231,24 @@ void cb_row(int c, void *data) {
     // Put a newline
     ctx->csv_buf = cbuf_putc(ctx->csv_buf, '\n');
 
+    // If we're injecting headers, and we don't have a header length, then
+    // this row is a header.  Otherwise, just increment our row count.
+    if(ctx->use_header && !ctx->header_len) {
+        // Set the length of our header
+        ctx->header_len = CBUF_POS(ctx->csv_buf);
+        
+        // Only increment our row count if we're counting header rows
+        if(ctx->count_header) {
+            ctx->row++;
+        }
+    } else {
+        // Increment row count
+        ctx->row++;
+    }
+
     // If we're at or above our row limit, either keep track/ of the position
-    //  of this row (if we're grouping columns), or write these rows to disk.
-    if(ctx->row++ >= ctx->max_rows - 1) {
+    // of this row (if we're grouping columns), or write these rows to disk.
+    if(ctx->row >= ctx->max_rows) {
         // Mark the position of this row if we're grouping columns, or flush
         if(ctx->gcol >= 0) {
             ctx->opos = CBUF_POS(ctx->csv_buf);
@@ -257,7 +279,7 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
     char *ptr;
 
     // While we've got arguments to parse
-    while((opt = getopt_long(argc, argv, "g:n:v:i:z::", g_long_opts, &opt_idx)) != -1) {
+    while((opt = getopt_long(argc, argv, "g:n:v:i:z::hd::", g_long_opts, &opt_idx)) != -1) {
         switch(opt) {
             case 't':
                 strncpy(ctx->trigger_cmd, optarg, sizeof(ctx->trigger_cmd));
@@ -267,7 +289,7 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
                 break;
             case 'n':
                 intval = atoi(optarg);
-                if(!intval || intval < 0) {
+                if(intval < 1) {
                     fprintf(stderr, "Number of lines per file must be a positive integer!\n");
                     exit(EXIT_FAILURE);
                 }
@@ -295,6 +317,13 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
             		}
             	}
             	break;
+            case 'd':
+                ctx->use_header = 1;
+                if(optarg) {
+                    intval = atoi(optarg);
+                    ctx->count_header = intval != 0;
+                }
+                break;
             case 'h':
             case '?':
                 print_usage(argv[0]);
@@ -309,6 +338,18 @@ int parse_args(struct csv_context *ctx, int argc, char **argv) {
                 }
                 break;
         }
+    }
+
+    // Make sure we have been passed a num-rows argument
+    if(!ctx->max_rows) {
+        fprintf(stderr, "Must specify the --num-rows (-n) argument!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Sanity check against "counting the header row" and splitting to one line per file
+    if(ctx->count_header && ctx->max_rows < 2) {
+        fprintf(stderr, "--num-rows must be > 1 if we're counting headers as rows!\n");
+        exit(EXIT_FAILURE);
     }
 
     // Get the filename we're reading or the prefix to use if reading from STDIN
@@ -397,6 +438,11 @@ void context_init(struct csv_context *ctx) {
 
     // Default to not gzipping our output files
     ctx->gzip = 0;
+
+    // Header injection flags
+    ctx->use_header   = 0;
+    ctx->count_header = 0;
+    ctx->header_len   = 0;
 }
 
 /**
@@ -450,8 +496,9 @@ void process_csv(struct csv_context *ctx) {
         }
     }
 
-    // Flush any additional data we have
-    if(CBUF_POS(ctx->csv_buf)) flush_file(ctx, 0);
+    // Write any additional rows to disk as long as it's just just our header we've been
+    // keeping around (if we're injecting headers).
+    if(CBUF_POS(ctx->csv_buf) > ctx->header_len) flush_file(ctx, 0);
 
     // Close our file
     fclose(fp);

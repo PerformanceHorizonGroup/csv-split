@@ -9,7 +9,7 @@
 /**
  * Version number
  */
-#define CSV_SPLIT_VERSION "0.1.0"
+#define CSV_SPLIT_VERSION "0.1.1"
 
 /**
  * Default IO thread count and sane min/max values
@@ -81,8 +81,20 @@ struct csv_context {
      */
     int gcol;
 
-    // Gzip compression level (zero for none)
+    /**
+     * GZIP compression level (zero for none)
+     */
     int gzip;
+
+    /**
+     * Our header injection flag as well as the length of the header once
+     * we find it.  This will be used to copy the header to each split file
+     * as we go.  If count_header is set, we'll count it in the number of
+     * output rows, otherwise we will not count the header (default).
+     */
+    unsigned short use_header;
+    unsigned short count_header;
+    unsigned int header_len;
 
     // Simple flag to let us know if we should put a comma
     unsigned int put_comma;
@@ -135,6 +147,7 @@ static const struct option g_long_opts[] = {
     { "trigger", required_argument, NULL, 't'},
     { "version", no_argument, NULL, 'v'},
     { "gzip", optional_argument, NULL, 'z'},
+    { "header", optional_argument, NULL, 'd'},
     { 0, 0, 0, 0}
 };
 

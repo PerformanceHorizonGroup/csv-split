@@ -42,3 +42,7 @@ csv-split [OPTIONS] --stdin PREFIX OUT-PATH
         CSV-PAYLOAD_FILE -- The filename that was written
         CSV_ROWCOUNT     -- How many rows are in this file
 
+*   **-d, --header**
+    If you pass the --header option, csv-split will treat the first row of the input csv file as a header
+    and inject it into each split file.  By default, the header row is not counted toward the total number
+    of rows written per file, but can be counted if you pass 1 to this argument (e.g. -d1, --header=1).
