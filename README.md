@@ -1,6 +1,6 @@
 # csv-split
 
-csv-split is a simple utility that can parse and break up large CSV files into smaller peices, with various options on how it does that.  
+csv-split is a simple utility that can parse and break up large CSV files into smaller pieces, with various options on how it does that.  
 
 ----
 # Compiling
